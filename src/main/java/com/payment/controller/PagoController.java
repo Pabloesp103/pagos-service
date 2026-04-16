@@ -16,14 +16,41 @@ public class PagoController {
     @Autowired
     private PagoRepository repository;
 
+    @Autowired
+    private org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
+
     @PostMapping("/procesar")
-    public Pago procesarPago(@RequestBody Pago pago) {
-        log.info("Procesando pago para la orden ID: {}", pago.getOrdenId());
-        pago.setEstado("PROCESADO");
-        pago.setFechaPago(LocalDateTime.now());
-        Pago pagoProcesado = repository.save(pago);
-        log.info("Pago procesado con éxito. ID Transacción: {}", pagoProcesado.getId());
-        return pagoProcesado;
+    public Pago procesarPago(@RequestBody Pago pago, @RequestHeader(value = "X-Retry-Attempt", required = false) String isRetry) {
+        log.info("Intentando procesar pago para la orden ID: {}", pago.getOrdenId());
+        try {
+            pago.setEstado("PROCESADO");
+            pago.setFechaPago(LocalDateTime.now());
+            Pago pagoProcesado = repository.save(pago);
+            log.info("Pago procesado con éxito. ID Transacción: {}", pagoProcesado.getId());
+            return pagoProcesado;
+        } catch (Exception e) {
+            log.error("Error al procesar pago. Validando reenvío. Error: {}", e.getMessage());
+
+            if ("true".equals(isRetry)) {
+                log.warn("El reintento falló de nuevo. NO se re-enviará a Kafka.");
+                throw new RuntimeException("Fallo persistente en procesar pago. Deteniendo ciclo.", e);
+            }
+            
+            log.info("Enviando a reintento (Kafka)...");
+            java.util.Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("data", pago);
+            payload.put("sendEmail", new java.util.HashMap<String, String>() {{
+                put("status", "PENDING");
+                put("message", "Pendiente de reintento");
+            }});
+            payload.put("updateRetryJobs", new java.util.HashMap<String, String>() {{
+                put("status", "PENDING");
+                put("message", "Pendiente de reintento");
+            }});
+            
+            kafkaTemplate.send("payments_retry_jobs", payload);
+            throw new RuntimeException("Error al procesar pago. Enviado a cola de reintentos.", e);
+        }
     }
 
     @GetMapping("/{id}")
