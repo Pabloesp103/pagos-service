@@ -2,16 +2,18 @@ package com.payment.controller;
 
 import com.payment.model.Pago;
 import com.payment.repository.PagoRepository;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 
-@Slf4j
 @RestController
 @RequestMapping("/pagos")
 public class PagoController {
+
+    private static final Logger log = LoggerFactory.getLogger(PagoController.class);
 
     @Autowired
     private PagoRepository repository;
@@ -21,7 +23,7 @@ public class PagoController {
 
     @PostMapping("/procesar")
     public Pago procesarPago(@RequestBody Pago pago, @RequestHeader(value = "X-Retry-Attempt", required = false) String isRetry) {
-        log.info("Intentando procesar pago para la orden ID: {}", pago.getOrdenId());
+        log.info("Intentando procesar pago for the order ID: {}", pago.getOrdenId());
         try {
             pago.setEstado("PROCESADO");
             pago.setFechaPago(LocalDateTime.now());
