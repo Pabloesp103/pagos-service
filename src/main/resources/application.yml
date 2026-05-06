@@ -9,6 +9,28 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: notification-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.value.default.type: java.util.Map
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.kafka.support.serializer.JsonSerializer.ADD_TYPE_INFO: false
+        spring.json.use.type.headers: false
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: pabloesp2003@gmail.com
+    password: si
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
   data:
     mongodb:
       uri: mongodb://mongodb:27017/pagos

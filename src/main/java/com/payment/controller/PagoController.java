@@ -29,6 +29,10 @@ public class PagoController {
             pago.setFechaPago(LocalDateTime.now());
             Pago pagoProcesado = repository.save(pago);
             log.info("Pago procesado con éxito. ID Transacción: {}", pagoProcesado.getId());
+            
+            // Emitir evento de pago recibido
+            kafkaTemplate.send("payment_received_events", pagoProcesado);
+            
             return pagoProcesado;
         } catch (Exception e) {
             log.error("Error al procesar pago. Validando reenvío. Error: {}", e.getMessage());
